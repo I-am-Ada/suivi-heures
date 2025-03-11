@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Suivi des heures</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 30px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #1f1f1f;
+      padding: 40px 50px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+    h1, h2, h3 {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .inline-group {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 25px;
+    }
+    label {
+      font-weight: bold;
+      margin: 0;
+    }
+    select, input[type="date"], button {
+      padding: 10px 12px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #2a2a2a;
+      color: #e0e0e0;
+      font-size: 15px;
+    }
+    select:focus, input[type="date"]:focus, button:focus {
+      outline: none;
+      border-color: #888888;
+    }
+    button {
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #arrivalBtn {
+      background-color: #1b3f2e;
+      border-color: #777777;
+    }
+    #arrivalBtn:hover {
+      background-color: #31694f;
+    }
+    #departureBtn {
+      background-color: #331d1d;
+      border-color: #555555;
+    }
+    #departureBtn:hover {
+      background-color: #613b3b;
+    }
+    #resetBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #3a3a3a;
+      border: none;
+      padding: 10px 14px;
+      font-size: 15px;
+      color: #fff;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    #resetBtn:hover {
+      background-color: #4a4a4a;
+    }
+    .error {
+      text-align: center;
+      margin-top: 15px;
+      color: #aaaaaa;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+    table th, table td {
+      border: 1px solid #444;
+      padding: 12px;
+      text-align: center;
+    }
+    table th {
+      background: #2a2a2a;
+    }
+    .editable {
+      cursor: pointer;
+    }
+    .editable:hover {
+      background-color: #333333;
+    }
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 4px;
+      border: 1px solid #444;
+    }
+    #exportPdfBtn {
+      display: block;
+      margin: 30px auto 0 auto;
+      background-color: #555555;
+      border: 1px solid #777777;
+      color: #fff;
+      padding: 12px 25px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-size: 15px;
+    }
+    #exportPdfBtn:hover {
+      background-color: #777777;
+    }
+
+    #passwordModal {
+      position: fixed;
+      z-index: 999;
+      left: 0; top: 0; 
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #passwordModal .modal-content {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 6px;
+      max-width: 300px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    #passwordModal h2 {
+      margin-bottom: 15px;
+    }
+    #modalPasswordInput {
+      width: 90%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #1f1f1f;
+      color: #fff;
+    }
+    #passwordModal button {
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background-color: #3a3a3a;
+      color: #fff;
+      cursor: pointer;
+    }
+    #passwordError {
+      color: #e74c3c;
+      margin-top: 10px;
+    }
+
+    
+    .delete-btn {
+      background-color: #331d1d;
+      border: 1px solid #555;
+      border-radius: 4px;
+      color: #fff;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .delete-btn:hover {
+      background-color: #613b3b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Acerola - Suivi des heures</h1>
+    <button id="resetBtn">Réinitialiser tout</button>
+    
+    <div id="pointageSection" class="inline-group">
+      <label for="employeeSelect">Nom :</label>
+      <select id="employeeSelect"></select>
+      <button id="arrivalBtn">Arrivée</button>
+      <button id="departureBtn">Départ</button>
+    </div>
+    <div id="message" class="error"></div>
+
+    <br><br>
+    <h2>Historiques des pointages (100 derniers)</h2>
+
+    <div id="filterSection" class="inline-group">
+      <label for="startDate">Date début :</label>
+      <input type="date" id="startDate">
+      <label for="endDate">Date fin :</label>
+      <input type="date" id="endDate">
+      <button id="filterBtn">Filtrer</button>
+    </div>
+    
+    <table id="planningTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Nom</th>
+          <th>Arrivée</th>
+          <th>Départ</th>
+          <th>Total (heures)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <div id="summarySection" class="summary">
+      <h3>Résumé des heures</h3>
+      <div id="summaryContent"></div>
+    </div>
+    
+    <button id="exportPdfBtn">Exporter PDF</button>
+  </div>
+
+  <div id="passwordModal">
+    <div class="modal-content">
+      <h2>Mot de passe</h2>
+      <input id="modalPasswordInput" type="password" placeholder="Entrez le mot de passe">
+      <br>
+      <button id="modalConfirmBtn">Valider</button>
+      <button id="modalCancelBtn">Annuler</button>
+      <div id="passwordError"></div>
+    </div>
+  </div>
+
+  <script>
+    const MAX_DISPLAY_ENTRIES = 100;
+
+
+    const CORRECT_PASSWORD = "0905";
+    const employees = ["Sol", "Nico", "Natalia", "Inès", "Danyal"];
+
+    let records = [];
+    let pendingAction = null;
+    let pendingDeleteRecordId = null;
+
+    function loadRecords() {
+      records = localStorage.getItem('pointages')
+        ? JSON.parse(localStorage.getItem('pointages'))
+        : [];
+    }
+    function saveRecords() {
+      localStorage.setItem('pointages', JSON.stringify(records));
+    }
+    loadRecords();
+
+    const employeeSelect = document.getElementById('employeeSelect');
+    function populateEmployeeSelect() {
+      employeeSelect.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      //placeholder.hidden = true;
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      placeholder.textContent = '-- Choisir --';
+      employeeSelect.appendChild(placeholder);
+
+      employees.forEach(emp => {
+        const option = document.createElement('option');
+        option.value = emp;
+        option.textContent = emp;
+        employeeSelect.appendChild(option);
+      });
+    }
+    populateEmployeeSelect();
+
+    function showMessage(text, isError = true) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      messageDiv.style.color = isError ? '#e74c3c' : '#2ecc71';
+      setTimeout(() => { messageDiv.textContent = ''; }, 3000);
+    }
+    function formatDateTime(isoStr) {
+      if (!isoStr) return '';
+      const dt = new Date(isoStr);
+      return dt.toLocaleString('fr-FR', { hour12: false });
+    }
+    function calculateDuration(arrival, departure) {
+      if (!arrival || !departure) return '';
+      const diffMs = new Date(departure) - new Date(arrival);
+      const diffHours = diffMs / (1000 * 60 * 60);
+      return diffHours.toFixed(2);
+    }
+    function getNextId() {
+      let maxId = 0;
+      records.forEach(r => {
+        if (r.id > maxId) maxId = r.id;
+      });
+      return maxId + 1;
+    }
+
+    function updatePlanningDisplay(filteredRecords = null) {
+      const planningTableBody = document.querySelector('#planningTable tbody');
+      let data = filteredRecords || records;
+      data.sort((a, b) => new Date(a.arrival) - new Date(b.arrival));
+      const dataToDisplay = data.slice(-MAX_DISPLAY_ENTRIES);
+
+      planningTableBody.innerHTML = '';
+      dataToDisplay.forEach(record => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = record.id;
+        
+        const dateCell = document.createElement('td');
+        dateCell.textContent = record.arrival
+          ? new Date(record.arrival).toLocaleDateString('fr-FR')
+          : '';
+        
+        const empCell = document.createElement('td');
+        empCell.textContent = record.employee;
+        
+        const arrivalCell = document.createElement('td');
+        arrivalCell.textContent = formatDateTime(record.arrival);
+        arrivalCell.classList.add('editable');
+        arrivalCell.dataset.field = 'arrival';
+        arrivalCell.dataset.id = record.id;
+        
+        const departureCell = document.createElement('td');
+        departureCell.textContent = formatDateTime(record.departure);
+        departureCell.classList.add('editable');
+        departureCell.dataset.field = 'departure';
+        departureCell.dataset.id = record.id;
+        
+        const totalCell = document.createElement('td');
+        totalCell.textContent = calculateDuration(record.arrival, record.departure);
+
+        const actionCell = document.createElement('td');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = "X";
+        deleteBtn.classList.add('delete-btn');
+        deleteBtn.addEventListener('click', () => {
+          pendingAction = "deleteOne";
+          pendingDeleteRecordId = record.id;
+          openPasswordModal();
+        });
+        actionCell.appendChild(deleteBtn);
+        
+        tr.append(dateCell, empCell, arrivalCell, departureCell, totalCell, actionCell);
+        planningTableBody.appendChild(tr);
+      });
+
+      updateSummary(filteredRecords || records);
+    }
+    function updateSummary(filteredRecords) {
+      const summaryContent = document.getElementById('summaryContent');
+      const summary = {};
+
+      filteredRecords.forEach(record => {
+        if (record.arrival && record.departure) {
+          const hours = parseFloat(calculateDuration(record.arrival, record.departure));
+          if (!isNaN(hours)) {
+            summary[record.employee] = (summary[record.employee] || 0) + hours;
+          }
+        }
+      });
+
+      let html = '<ul>';
+      for (const emp in summary) {
+        html += `<li>${emp} : ${summary[emp].toFixed(2)} heures</li>`;
+      }
+      html += '</ul>';
+      summaryContent.innerHTML = html;
+    }
+
+    function recordArrival() {
+      const employee = employeeSelect.value;
+      if (!employee) {
+        showMessage("Aucun nom sélectionné.");
+        return;
+      }
+      if (records.find(r => r.employee === employee && !r.departure)) {
+        showMessage("Arrivée déjà enregistrée sans départ.");
+        return;
+      }
+      const now = new Date().toISOString();
+      const newRecord = { id: getNextId(), employee, arrival: now, departure: null };
+      records.push(newRecord);
+      saveRecords();
+      updatePlanningDisplay();
+      showMessage("Arrivée enregistrée !", false);
+    }
+
+    function recordDeparture() {
+      const employee = employeeSelect.value;
+      if (!employee) {
+        showMessage("Aucun nom sélectionné.");
+        return;
+      }
+      const record = records.find(r => r.employee === employee && !r.departure);
+      if (!record) {
+        showMessage("Aucune arrivée trouvée.");
+        return;
+      }
+      const now = new Date().toISOString();
+      record.departure = now;
+      saveRecords();
+      updatePlanningDisplay();
+      showMessage("Départ enregistré !", false);
+    }
+
+    function filterRecords() {
+      let filtered = records;
+      const startDateInput = document.getElementById('startDate');
+      const endDateInput = document.getElementById('endDate');
+      const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+      const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+
+      if (startDate) {
+        filtered = filtered.filter(r => r.arrival && new Date(r.arrival) >= startDate);
+      }
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(r => r.arrival && new Date(r.arrival) <= endDate);
+      }
+      updatePlanningDisplay(filtered);
+    }
+
+    function exportPDF() {
+      let filtered = records;
+      const startDateInput = document.getElementById('startDate');
+      const endDateInput = document.getElementById('endDate');
+      const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+      const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+
+      if (startDate) {
+        filtered = filtered.filter(r => r.arrival && new Date(r.arrival) >= startDate);
+      }
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(r => r.arrival && new Date(r.arrival) <= endDate);
+      }
+      filtered.sort((a, b) => new Date(a.arrival) - new Date(b.arrival));
+      
+      const tableBody = filtered.map(record => {
+        const dateStr = record.arrival
+          ? new Date(record.arrival).toLocaleDateString('fr-FR')
+          : '';
+        const arrivalStr = formatDateTime(record.arrival);
+        const departureStr = formatDateTime(record.departure);
+        const totalStr = (record.arrival && record.departure)
+          ? calculateDuration(record.arrival, record.departure)
+          : '';
+        return [dateStr, record.employee, arrivalStr, departureStr, totalStr];
+      });
+      
+      const summary = {};
+      filtered.forEach(record => {
+        if (record.arrival && record.departure) {
+          const hours = parseFloat(calculateDuration(record.arrival, record.departure));
+          if (!isNaN(hours)) {
+            summary[record.employee] = (summary[record.employee] || 0) + hours;
+          }
+        }
+      });
+      const summaryBody = Object.keys(summary).map(emp => [
+        emp, 
+        summary[emp].toFixed(2) + " heures"
+      ]);
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(16);
+      doc.text("Historique des pointages", 14, 20);
+      
+      doc.setFontSize(12);
+      doc.autoTable({
+        startY: 30,
+        head: [["Date", "Employé", "Arrivée", "Départ", "Total (heures)"]],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: [255,255,255], textColor: [0,0,0] },
+        bodyStyles: { textColor: [0,0,0] },
+        styles: { lineColor: [0,0,0], lineWidth: 0.1, cellPadding: 4 }
+      });
+      
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.text("Résumé des heures par employé", 14, finalY);
+      doc.autoTable({
+        startY: finalY + 5,
+        head: [["Employé", "Total heures"]],
+        body: summaryBody,
+        theme: 'grid',
+        headStyles: { fillColor: [255,255,255], textColor: [0,0,0] },
+        bodyStyles: { textColor: [0,0,0] },
+        styles: { lineColor: [0,0,0], lineWidth: 0.1, cellPadding: 4 }
+      });
+      
+      doc.save("pointages.pdf");
+    }
+
+    const passwordModal = document.getElementById('passwordModal');
+    const passwordInput = document.getElementById('modalPasswordInput');
+    const passwordError = document.getElementById('passwordError');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    
+    function openPasswordModal() {
+      passwordModal.style.display = "flex";
+      passwordInput.value = "";
+      passwordError.textContent = "";
+      passwordInput.focus();
+    }
+    function closePasswordModal() {
+      passwordModal.style.display = "none";
+    }
+
+    modalConfirmBtn.addEventListener('click', () => {
+      const enteredPassword = passwordInput.value.trim();
+      if (enteredPassword === CORRECT_PASSWORD) {
+        if (pendingAction === "resetAll") {
+          localStorage.clear();
+          location.reload();
+        }
+        else if (pendingAction === "deleteOne") {
+          deleteRecordById(pendingDeleteRecordId);
+        }
+        closePasswordModal();
+      } else {
+        passwordError.textContent = "Mot de passe incorrect !";
+      }
+    });
+    modalCancelBtn.addEventListener('click', () => {
+      closePasswordModal();
+      pendingAction = null;
+      pendingDeleteRecordId = null;
+    });
+
+    function deleteRecordById(recordId) {
+      records = records.filter(r => r.id !== recordId);
+      saveRecords();
+      updatePlanningDisplay();
+      showMessage("Ligne supprimée !", false);
+      pendingAction = null;
+      pendingDeleteRecordId = null;
+    }
+
+    const resetBtn = document.getElementById('resetBtn');
+    resetBtn.addEventListener('click', () => {
+      pendingAction = "resetAll";
+      pendingDeleteRecordId = null;
+      openPasswordModal();
+    });
+
+    document.querySelector('#planningTable tbody').addEventListener('dblclick', function(event) {
+      const target = event.target;
+      if (target.classList.contains('editable')) {
+        const field = target.dataset.field;
+        const id = parseInt(target.dataset.id);
+        const record = records.find(r => r.id === id);
+        if (record) {
+          const input = document.createElement('input');
+          input.type = 'datetime-local';
+          if (record[field]) {
+            const dt = new Date(record[field]);
+            const pad = n => n.toString().padStart(2, '0');
+            const localValue = 
+              dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) +
+              'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+            input.value = localValue;
+          }
+          target.textContent = '';
+          target.appendChild(input);
+          input.focus();
+
+          input.addEventListener('blur', function() {
+            const newValue = input.value;
+            if (newValue) {
+              const isoValue = new Date(newValue).toISOString();
+              record[field] = isoValue;
+              saveRecords();
+              updatePlanningDisplay();
+              showMessage("Heure mise à jour", false);
+            } else {
+              updatePlanningDisplay();
+            }
+          });
+        }
+      }
+    });
+
+    document.getElementById('arrivalBtn').addEventListener('click', recordArrival);
+    document.getElementById('departureBtn').addEventListener('click', recordDeparture);
+    document.getElementById('filterBtn').addEventListener('click', filterRecords);
+    document.getElementById('exportPdfBtn').addEventListener('click', exportPDF);
+
+    updatePlanningDisplay();
+  </script>
+</body>
+</html>
